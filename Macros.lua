@@ -204,9 +204,48 @@ local function playMacroData()
     repeat
         local char = player.Character
         local root = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
         
-        if root then
+        if root and hum then
             infoLabel.Text = "Статус: Слот " .. currentSlot .. " | Бежим..."
+            
+            local startPos = root.Position
+            local targetPos = activeRoute[1].Position
+            local distance = (targetPos - startPos).Magnitude
+            
+            if distance > 0.5 then
+                local speed = hum.WalkSpeed
+                local startTime = os.clock()
+                local duration = distance / speed
+                
+                local connection
+                connection = RunService.Heartbeat:Connect(function()
+                    if not isPlaying then
+                        connection:Disconnect()
+                        return
+                    end
+                    
+                    local elapsed = os.clock() - startTime
+                    local alpha = math.clamp(elapsed / duration, 0, 1)
+                    
+                    if char and root then
+                        local currentPos = startPos:Lerp(targetPos, alpha)
+                        local lookCFrame = CFrame.new(currentPos, Vector3.new(targetPos.X, currentPos.Y, targetPos.Z))
+                        if targetPos == startPos then
+                            lookCFrame = CFrame.new(currentPos)
+                        end
+                        root.CFrame = lookCFrame
+                    end
+                    
+                    if alpha >= 1 then
+                        connection:Disconnect()
+                    end
+                end)
+                
+                while connection.Connected and isPlaying do
+                    RunService.Heartbeat:Wait()
+                end
+            end
             
             for i = 1, #activeRoute do
                 if not isPlaying then break end
